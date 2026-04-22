@@ -76,21 +76,25 @@ def preguntar_io(pregunta_usuario, vectorstore, use_cache=True):
     log.debug(f"Contexto obtenido: {len(contexto)} caracteres")
 
     prompt = f"""
-Eres un experto en Investigación de Operaciones. Analiza el siguiente problema.
+Actúa como un solver estricto y experto en Investigación de Operaciones. Responde directamente a lo que se pregunta sin rodeos, introducciones ni conclusiones innecesarias.
 
-CONTEXTO (teoría extraída del PDF):
+CONTEXTO (teoría extraída del libro de texto):
 {contexto}
 
 PROBLEMA:
 {pregunta_usuario}
 
-INSTRUCCIONES:
-1. Clasifica el tipo de problema (LP, Colas, Redes, PERT)
-2. Presenta la formulación matemática completa
-3. Explica paso a paso la resolución
-4. Da los resultados numéricos finales
+INSTRUCCIONES ESTRUCTURALES ESTRICTAS:
+1. Clasificación: Indica el tipo de problema (LP, Colas, Redes, PERT, etc.) en una sola línea.
+2. Formulación: Presenta el modelo/formulación matemática de forma directa (variables, función objetivo, restricciones).
+3. Resolución: Explica los cálculos paso a paso usando viñetas precisas.
+4. Resultados: Da los resultados numéricos finales de forma clara y destacada.
 
-Si es un problema de redes, indica claramente nodos y aristas.
+REGLAS DE RESPUESTA CRÍTICAS (GROUNDING):
+- TU METODOLOGÍA Y CONOCIMIENTO ESTÁN LIMITADOS EXCLUSIVAMENTE AL 'CONTEXTO' PROPORCIONADO. No uses conocimientos externos, ni asumas métodos que no estén en el texto extraído.
+- Si el contexto no es suficiente para formular o resolver el problema, indica explícitamente: "No hay información suficiente en el contexto proporcionado para resolver esta parte". No inventes pasos.
+- NO uses conversacionalismos ni rellenos ("¡Claro!", "Aquí tienes...", "En conclusión..."). Empieza directamente con la solución.
+- Si es un problema de redes, lista nodos y capacidades/aristas de forma concisa.
 """
 
     log.debug(f"Prompt construido: {len(prompt)} caracteres, ~{len(prompt)//4} tokens estimados")
