@@ -10,3 +10,14 @@ __pycache__/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Caches e IA
+chroma_db/
+logs/
+*.log
+response_cache.db
+response_cache.json
+
+# Frontend (React)
+frontend/node_modules/
+frontend/dist/
