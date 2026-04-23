@@ -1,6 +1,6 @@
 # 🧮 IA Calculadora — Investigación de Operaciones
 
-Sistema inteligente que combina **solvers numéricos** con **RAG (Retrieval Augmented Generation)** sobre Gemini para resolver problemas de Investigación de Operaciones.
+Sistema inteligente con **RAG (Retrieval Augmented Generation)** sobre Gemini para resolver problemas de Investigación de Operaciones.
 
 > Le da a Gemini el contexto de un libro de IO (Hillier, 10ª edición) para que responda con base en la teoría, no en su conocimiento general.
 
@@ -26,18 +26,13 @@ Sistema inteligente que combina **solvers numéricos** con **RAG (Retrieval Augm
 | `logging_config.py` | Logging a consola y archivo en `logs/` |
 | `embeddings.py` | Generación de embeddings, ChromaDB, búsqueda semántica |
 | `rag.py` | Consultas a Gemini con contexto del libro (RAG) |
-| `solvers.py` | Solucionadores numéricos: scipy (LP), PuLP (LP/IP), Dijkstra |
 | `codigo.ipynb` | **Notebook principal** con ejemplos y consulta libre |
 
-### Solvers locales (sin IA)
+### Capacidades del RAG con Gemini
 
-- **Programación Lineal** continua → `scipy.optimize.linprog`
-- **Programación Lineal Entera/Mixta** → `PuLP` con solver CBC
-- **Ruta más corta** → Algoritmo de Dijkstra
-
-### RAG con Gemini (con IA)
-
-- Flujo máximo en redes
+El sistema puede resolver cualquier problema de IO basándose estrictamente en el texto, incluyendo:
+- Programación Lineal Continua y Entera
+- Flujo máximo y ruta más corta en redes
 - PERT/CPM (gestión de proyectos)
 - Cualquier problema de IO descrito en lenguaje natural
 
@@ -72,7 +67,7 @@ source .venv/bin/activate
 ### 3. Instalar dependencias
 
 ```bash
-pip install langchain-classic langchain-community langchain-google-genai langchain-text-splitters chromadb pypdf scipy PuLP python-dotenv
+pip install langchain-classic langchain-community langchain-google-genai langchain-text-splitters chromadb pypdf python-dotenv
 ```
 
 ### 4. Configurar API Key
@@ -97,8 +92,7 @@ Abre `src/codigo.ipynb` en VS Code o Jupyter y ejecuta las celdas en orden:
 
 1. **Celda 1** — Carga los módulos
 2. **Celda 2** — Genera embeddings del PDF (solo la primera vez, ~5 min). Las siguientes veces carga instantáneamente desde ChromaDB.
-3. **Celdas 3-5** — Ejemplos con solvers locales (sin API)
-4. **Celdas 6-7** — Ejemplos con Gemini + RAG (usa API)
+3. **Celdas 3-7** — Diferentes ejemplos de resolución de problemas usando Gemini (RAG).
 
 ---
 
@@ -108,7 +102,6 @@ Abre `src/codigo.ipynb` en VS Code o Jupyter y ejecuta las celdas en orden:
 |---|---|
 | Generar embeddings (una vez) | ~$0.10 USD |
 | Cada consulta RAG | ~$0.004 USD |
-| Solvers locales | $0 (sin API) |
 
 Con uso moderado (~100 consultas/mes): **~$0.40 USD/mes**.
 
@@ -129,7 +122,6 @@ IA---Calculadora/
     ├── logging_config.py       # Sistema de logging
     ├── embeddings.py           # Embeddings + ChromaDB
     ├── rag.py                  # RAG con Gemini
-    ├── solvers.py              # Solvers numéricos
     └── codigo.ipynb            # Notebook principal
 ```
 
@@ -141,6 +133,4 @@ IA---Calculadora/
 - **LangChain** — Orquestación de LLMs y embeddings
 - **Google Gemini 2.5 Flash** — Modelo de IA para razonamiento matemático
 - **ChromaDB** — Base de datos vectorial local
-- **scipy** — Optimización numérica
-- **PuLP** — Programación lineal entera
 - **PyPDF** — Extracción de texto de PDFs
