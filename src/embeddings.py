@@ -8,7 +8,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 import pymupdf4llm
 from langchain_core.documents import Document
 from langchain_community.vectorstores import Chroma
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from config import (PDF_PATH, CHROMA_DB_DIR, EMBEDDING_MODEL,
                     BATCH_SIZE, WAIT_SECONDS, MAX_CHUNKS,
                     CHUNK_SIZE, CHUNK_OVERLAP)
@@ -24,7 +24,7 @@ def get_embeddings_model():
 
 
 def load_and_split_pdf():
-    """Carga el PDF usando pymupdf4llm y lo divide en fragmentos optimizados (Markdown)."""
+    """Carga el PDF y lo divide semánticamente respetando jerarquías Markdown."""
     if not os.path.exists(PDF_PATH):
         log.error(f"PDF no encontrado en {PDF_PATH}")
         raise FileNotFoundError(f"❌ No se encontró el PDF en {PDF_PATH}")
@@ -36,23 +36,37 @@ def load_and_split_pdf():
         log.error(f"Error al procesar PDF con pymupdf4llm: {e}")
         raise
         
-    documentos = []
-    for chunk in md_chunks:
-        page_num = chunk.get("metadata", {}).get("page", 0) + 1
+    full_text = ""
+    for idx, chunk in enumerate(md_chunks):
+        page_num = chunk.get("metadata", {}).get("page", idx) + 1
         page_text = chunk.get("text", "")
         if page_text.strip():
-            doc = Document(page_content=page_text, metadata={"source": PDF_PATH, "page": page_num})
-            documentos.append(doc)
+            # Inyectar marcador de página para que el LLM sepa de dónde viene
+            full_text += f"\n\n---\n*PÁGINA {page_num}*\n\n" + page_text
             
-    log.info(f"PDF cargado y convertido a markdown: {len(documentos)} páginas útiles")
+    log.info("PDF cargado. Aplicando Semantic Chunking...")
 
+    # 1. División Semántica basada en Títulos (mantiene ecuaciones unidas bajo su título)
+    headers_to_split_on = [
+        ("#", "Capítulo"),
+        ("##", "Sección"),
+        ("###", "Subsección"),
+    ]
+    markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+    md_header_splits = markdown_splitter.split_text(full_text)
+
+    # 2. División secundaria para secciones exageradamente largas
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
-        separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""]
     )
-    chunks = text_splitter.split_documents(documentos)
-    log.info(f"{len(chunks)} fragmentos creados (chunk_size={CHUNK_SIZE}, overlap={CHUNK_OVERLAP})")
+    chunks = text_splitter.split_documents(md_header_splits)
+    
+    # Agregar source genérico a los metadatos
+    for c in chunks:
+        c.metadata["source"] = PDF_PATH
+
+    log.info(f"{len(chunks)} fragmentos semánticos creados con éxito.")
     return chunks
 
 
@@ -179,23 +193,48 @@ def load_or_create_vectorstore():
     return vectorstore, embeddings_model
 
 
-def search_context(query, vectorstore, k=15):
-    """
-    Busca los k fragmentos más relevantes usando similitud coseno.
-    ChromaDB usa coseno por defecto.
+from sentence_transformers import CrossEncoder
 
-    Retorna: (contexto_texto, resultados_con_metadata)
+_cross_encoder = None
+
+def get_cross_encoder():
+    global _cross_encoder
+    if _cross_encoder is None:
+        log.info("Inicializando modelo local de Re-Ranking (Cross-Encoder)...")
+        # Este modelo pesa ~80MB y es extremadamente efectivo para reordenar resultados RAG
+        _cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+    return _cross_encoder
+
+def search_context(query, vectorstore, k=25, top_n=6):
     """
-    log.debug(f"Buscando contexto para: '{query[:80]}...' (k={k})")
+    1. Retrieval rápido: Busca k=25 fragmentos con similitud coseno (ChromaDB).
+    2. Compresión (Re-Ranking): Evalúa los 25 fragmentos con un Cross-Encoder y retorna los top_n=6.
+    """
+    log.debug(f"Retrieval inicial: Buscando {k} contextos rápidos para: '{query[:80]}...'")
     results = vectorstore.similarity_search_with_score(query, k=k)
+    docs = [doc for doc, _ in results]
 
-    paginas = [doc.metadata.get("page", "?") for doc, _ in results]
-    scores = [f"{score:.3f}" for _, score in results]
-    log.info(f"Contexto encontrado — Páginas: {paginas}, Scores: {scores}")
-    print(f"  📖 Contexto extraído de páginas: {paginas}")
-    print(f"  📊 Scores de distancia: {scores}")
+    log.info("Aplicando Context Compression (Re-Ranking Cross-Encoder)...")
+    ce = get_cross_encoder()
+    
+    # Crear pares [Pregunta, Contexto] para que la IA decida si el contexto responde la pregunta
+    pairs = [[query, doc.page_content] for doc in docs]
+    scores = ce.predict(pairs)
+    
+    # Emparejar documentos con sus nuevas calificaciones y ordenar de mayor a menor
+    scored_docs = list(zip(docs, scores))
+    scored_docs.sort(key=lambda x: x[1], reverse=True)
+    
+    # Extraer los top_n más perfectos
+    best_results = scored_docs[:top_n]
 
-    contexto = "\n---\n".join([doc.page_content for doc, _ in results])
+    paginas = [doc.metadata.get("page", "?") for doc, _ in best_results]
+    ce_scores = [f"{score:.2f}" for _, score in best_results]
+    
+    log.info(f"Contexto comprimido (Top {top_n}) — Páginas: {paginas}, CE Scores: {ce_scores}")
+    print(f"  📖 Contexto ultra-preciso (Re-Rank) extraído de páginas: {paginas}")
+
+    contexto = "\n---\n".join([doc.page_content for doc, _ in best_results])
     return contexto
 
 

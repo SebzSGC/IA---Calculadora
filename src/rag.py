@@ -4,47 +4,59 @@ Consulta a Gemini con contexto del libro de IO.
 Optimizado para pay-as-you-go (reintentos rápidos).
 """
 import os
-import sqlite3
 import time
-import hashlib
+import shutil
 from langchain_google_genai import ChatGoogleGenerativeAI
-from embeddings import search_context
+from langchain_community.vectorstores import Chroma
+from langchain_core.documents import Document
+from embeddings import search_context, get_embeddings_model
 from config import CHAT_MODELS
 from logging_config import get_logger
 
 log = get_logger("rag")
 
-# Caché de respuestas en SQLite
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "response_cache.db")
+# Caché Semántico usando ChromaDB
+CACHE_DB_DIR = os.path.join(os.path.dirname(__file__), "..", "semantic_cache_db")
+_cache_vectorstore = None
 
-def _init_db():
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute('''CREATE TABLE IF NOT EXISTS cache
-                        (hash TEXT PRIMARY KEY, response TEXT)''')
-_init_db()
+def _get_cache_store():
+    global _cache_vectorstore
+    if _cache_vectorstore is None:
+        _cache_vectorstore = Chroma(
+            collection_name="semantic_cache",
+            embedding_function=get_embeddings_model(),
+            persist_directory=CACHE_DB_DIR
+        )
+    return _cache_vectorstore
 
-def _get_from_cache(cache_key):
+def _get_from_cache(pregunta_usuario, umbral=0.15):
+    """Busca preguntas similares en el vectorstore. Score menor a 0.15 es casi idéntico."""
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT response FROM cache WHERE hash = ?", (cache_key,))
-            row = cursor.fetchone()
-            if row: return row[0]
+        store = _get_cache_store()
+        resultados = store.similarity_search_with_score(pregunta_usuario, k=1)
+        if resultados:
+            doc, score = resultados[0]
+            if score <= umbral:
+                log.info(f"Cache Semántico HIT (Score L2: {score:.4f})")
+                return doc.metadata.get("response")
+            else:
+                log.debug(f"Cache Semántico MISS (Mejor Score L2: {score:.4f} > {umbral})")
     except Exception as e:
-        log.error(f"Error leyendo cache DB: {e}")
+        log.error(f"Error leyendo caché semántico: {e}")
     return None
 
-def _save_to_cache(cache_key, response):
+def _save_to_cache(pregunta_usuario, respuesta):
+    """Guarda la pregunta como vector y la respuesta como metadato."""
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.execute("INSERT OR REPLACE INTO cache (hash, response) VALUES (?, ?)", (cache_key, response))
-            conn.commit()
+        store = _get_cache_store()
+        doc = Document(
+            page_content=pregunta_usuario,
+            metadata={"response": respuesta}
+        )
+        store.add_documents([doc])
+        log.debug("Guardado en caché semántico exitoso.")
     except Exception as e:
-        log.error(f"Error guardando cache DB: {e}")
-
-def _get_cache_key(pregunta):
-    """Genera una clave de caché basada en la pregunta."""
-    return hashlib.md5(pregunta.strip().lower().encode()).hexdigest()
+        log.error(f"Error guardando en caché semántico: {e}")
 
 
 def preguntar_io(pregunta_usuario, vectorstore, use_cache=True):
@@ -69,15 +81,12 @@ def preguntar_io(pregunta_usuario, vectorstore, use_cache=True):
     log.info(f"NUEVA CONSULTA: {pregunta_usuario[:100]}...")
     log.info("=" * 60)
 
-    # 1. Verificar caché
+    # 1. Verificar caché semántico
     if use_cache:
-        cache_key = _get_cache_key(pregunta_usuario)
-        cached_response = _get_from_cache(cache_key)
+        cached_response = _get_from_cache(pregunta_usuario)
         if cached_response:
-            log.info(f"Cache HIT — clave: {cache_key}")
-            print("⚡ Respuesta cargada desde caché DB (0 API calls)")
+            print("⚡ Respuesta cargada desde Caché Semántico (0 API calls)")
             return cached_response
-        log.debug(f"Cache MISS — clave: {cache_key}")
 
     # 2. Buscar contexto relevante
     log.info("Buscando contexto relevante en ChromaDB...")
@@ -140,11 +149,10 @@ REGLAS DE RESPUESTA CRÍTICAS (SIMPLICIDAD Y PEDAGOGÍA):
                 resultado = respuesta.content
                 log.info(f"✅ Respuesta recibida de {model_name} en {t_elapsed:.1f}s ({len(resultado)} chars)")
 
-                # Guardar en caché
+                # Guardar en caché semántico
                 if use_cache:
-                    _save_to_cache(cache_key, resultado)
-                    log.info(f"Respuesta guardada en caché SQLite (clave: {cache_key})")
-                    print("💾 Respuesta guardada en caché local DB")
+                    _save_to_cache(pregunta_usuario, resultado)
+                    print("💾 Respuesta guardada en Caché Semántico local")
 
                 return resultado
 
@@ -173,16 +181,16 @@ REGLAS DE RESPUESTA CRÍTICAS (SIMPLICIDAD Y PEDAGOGÍA):
 
 
 def limpiar_cache_respuestas():
-    """Limpia el historial del caché de respuestas SQLite mediante query en lugar de borrar el archivo físico."""
-    if os.path.exists(DB_PATH):
+    """Destruye la base de datos de caché semántico."""
+    if os.path.exists(CACHE_DB_DIR):
         try:
-            with sqlite3.connect(DB_PATH) as conn:
-                conn.execute("DELETE FROM cache")
-                conn.commit()
-            log.info("Caché de respuestas (DB) limpiado con éxito")
-            print("🗑️ Historial de caché limpiado.")
+            global _cache_vectorstore
+            _cache_vectorstore = None
+            shutil.rmtree(CACHE_DB_DIR)
+            log.info("Caché Semántico destruido con éxito.")
+            print("🗑️ Historial de caché semántico limpiado.")
         except Exception as e:
-            log.error(f"Error vaciando tabla de caché: {e}")
+            log.error(f"Error borrando caché semántico: {e}")
     else:
         log.info("No hay caché de respuestas para eliminar")
         print("No hay caché de respuestas.")
