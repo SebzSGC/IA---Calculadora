@@ -4,8 +4,9 @@ Usa ChromaDB como vector store persistente (local, sin costo adicional de API).
 """
 import os
 import time
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_huggingface import HuggingFaceEmbeddings
+import pymupdf4llm
+from langchain_core.documents import Document
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from config import (PDF_PATH, CHROMA_DB_DIR, EMBEDDING_MODEL,
@@ -18,25 +19,37 @@ log = get_logger("embeddings")
 
 def get_embeddings_model():
     """Retorna el modelo de embeddings configurado."""
-    log.info(f"Inicializando modelo de embeddings: {EMBEDDING_MODEL}")
-    return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
+    log.info(f"Inicializando modelo local HF de embeddings: {EMBEDDING_MODEL}")
+    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
 
 def load_and_split_pdf():
-    """Carga el PDF y lo divide en fragmentos optimizados."""
+    """Carga el PDF usando pymupdf4llm y lo divide en fragmentos optimizados (Markdown)."""
     if not os.path.exists(PDF_PATH):
         log.error(f"PDF no encontrado en {PDF_PATH}")
         raise FileNotFoundError(f"❌ No se encontró el PDF en {PDF_PATH}")
 
-    log.info(f"Cargando PDF desde {PDF_PATH}")
-    loader = PyPDFLoader(PDF_PATH)
-    documentos = loader.load()
-    log.info(f"PDF cargado: {len(documentos)} páginas")
+    log.info(f"Cargando PDF y convirtiendo a Markdown con pymupdf4llm desde {PDF_PATH}. Esto puede demorar unos minutos...")
+    try:
+        md_chunks = pymupdf4llm.to_markdown(PDF_PATH, page_chunks=True)
+    except Exception as e:
+        log.error(f"Error al procesar PDF con pymupdf4llm: {e}")
+        raise
+        
+    documentos = []
+    for chunk in md_chunks:
+        page_num = chunk.get("metadata", {}).get("page", 0) + 1
+        page_text = chunk.get("text", "")
+        if page_text.strip():
+            doc = Document(page_content=page_text, metadata={"source": PDF_PATH, "page": page_num})
+            documentos.append(doc)
+            
+    log.info(f"PDF cargado y convertido a markdown: {len(documentos)} páginas útiles")
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
-        separators=["\n\n", "\n", ". ", " "]
+        separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""]
     )
     chunks = text_splitter.split_documents(documentos)
     log.info(f"{len(chunks)} fragmentos creados (chunk_size={CHUNK_SIZE}, overlap={CHUNK_OVERLAP})")
@@ -130,55 +143,43 @@ def load_or_create_vectorstore():
     """
     Carga el vector store desde ChromaDB si existe,
     o lo crea desde el PDF si es la primera vez.
-    Soporta actualización incremental: si el PDF tiene más chunks
-    que los ya almacenados, solo genera embeddings para los nuevos.
-
-    Retorna: (vectorstore, embeddings_model)
     """
     log.info("=== Iniciando carga/creación de vectorstore ===")
     embeddings_model = get_embeddings_model()
 
-    # Cargar chunks del PDF (operación local, 0 API calls)
+    # Verificar si ya existe ChromaDB persistido
+    if os.path.exists(CHROMA_DB_DIR) and os.listdir(CHROMA_DB_DIR):
+        try:
+            log.info(f"ChromaDB encontrado en {CHROMA_DB_DIR}")
+            vectorstore = Chroma(
+                persist_directory=CHROMA_DB_DIR,
+                embedding_function=embeddings_model
+            )
+            existing = vectorstore._collection.count()
+            log.info(f"Chunks existentes en ChromaDB: {existing}")
+
+            if existing > 0:
+                log.info(f"Vector store completo: {existing} fragmentos cargados de memoria (0 API calls)")
+                print(f"⚡ Vector store completo: {existing} fragmentos cargados rápido (0 API calls)")
+                return vectorstore, embeddings_model
+        except Exception as e:
+            log.warning(f"ChromaDB parece estar corrupto o usando modelo viejo, se recreará. Error: {e}")
+
+    # Si no existe o estaba corrupto: generar desde cero
+    log.info("ChromaDB no encontrado o vacío. Generando desde cero...")
+    print("🔄 No se encontró ChromaDB válido. Generando embeddings por primera vez...\n")
+    
+    # Cargar chunks del PDF (operación local)
     chunks = load_and_split_pdf()
     total_deseado = len(chunks) if MAX_CHUNKS is None else min(MAX_CHUNKS, len(chunks))
     chunks = chunks[:total_deseado]
     log.info(f"Total de chunks deseados: {total_deseado}")
-
-    # Verificar si ya existe ChromaDB persistido
-    if os.path.exists(CHROMA_DB_DIR) and os.listdir(CHROMA_DB_DIR):
-        log.info(f"ChromaDB encontrado en {CHROMA_DB_DIR}")
-        vectorstore = Chroma(
-            persist_directory=CHROMA_DB_DIR,
-            embedding_function=embeddings_model
-        )
-        existing = vectorstore._collection.count()
-        log.info(f"Chunks existentes en ChromaDB: {existing}")
-
-        if existing >= total_deseado:
-            log.info(f"Vector store completo: {existing} fragmentos (0 API calls)")
-            print(f"⚡ Vector store completo: {existing} fragmentos (0 API calls)")
-            return vectorstore, embeddings_model
-
-        # Modo incremental: solo procesar los chunks faltantes
-        missing = chunks[existing:]
-        log.info(f"Modo incremental: agregando {len(missing)} chunks faltantes")
-        print(f"📈 ChromaDB tiene {existing}/{total_deseado} fragmentos")
-        print(f"   Agregando {len(missing)} fragmentos nuevos...\n")
-        _add_chunks_in_batches(vectorstore, missing, embeddings_model)
-
-        final = vectorstore._collection.count()
-        log.info(f"Vector store actualizado: {final} fragmentos totales")
-        print(f"\n✅ Vector store actualizado: {final} fragmentos totales")
-        return vectorstore, embeddings_model
-
-    # Primera vez: generar desde cero
-    log.info("ChromaDB no encontrado. Generando desde cero...")
-    print("🔄 No se encontró ChromaDB. Generando embeddings por primera vez...\n")
+    
     vectorstore = create_vectorstore_with_rate_limit(chunks, embeddings_model)
     return vectorstore, embeddings_model
 
 
-def search_context(query, vectorstore, k=5):
+def search_context(query, vectorstore, k=15):
     """
     Busca los k fragmentos más relevantes usando similitud coseno.
     ChromaDB usa coseno por defecto.

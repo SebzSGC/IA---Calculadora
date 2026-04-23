@@ -28,7 +28,7 @@ log.debug(f"PDF_PATH: {PDF_PATH}")
 log.debug(f"CHROMA_DB_DIR: {CHROMA_DB_DIR}")
 
 # Modelos
-EMBEDDING_MODEL = "models/gemini-embedding-001"
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CHAT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]  # Optimizado para razonamiento matemático IO
 
 log.info(f"Modelos chat: {CHAT_MODELS}")

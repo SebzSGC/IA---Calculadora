@@ -4,7 +4,7 @@ Consulta a Gemini con contexto del libro de IO.
 Optimizado para pay-as-you-go (reintentos rápidos).
 """
 import os
-import json
+import sqlite3
 import time
 import hashlib
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -14,23 +14,33 @@ from logging_config import get_logger
 
 log = get_logger("rag")
 
-# Caché de respuestas en disco
-RESPONSE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "response_cache.json")
+# Caché de respuestas en SQLite
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "response_cache.db")
 
+def _init_db():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS cache
+                        (hash TEXT PRIMARY KEY, response TEXT)''')
+_init_db()
 
-def _load_response_cache():
-    """Carga el caché de respuestas desde disco."""
-    if os.path.exists(RESPONSE_CACHE_FILE):
-        with open(RESPONSE_CACHE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+def _get_from_cache(cache_key):
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT response FROM cache WHERE hash = ?", (cache_key,))
+            row = cursor.fetchone()
+            if row: return row[0]
+    except Exception as e:
+        log.error(f"Error leyendo cache DB: {e}")
+    return None
 
-
-def _save_response_cache(cache):
-    """Guarda el caché de respuestas en disco."""
-    with open(RESPONSE_CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(cache, f, ensure_ascii=False, indent=2)
-
+def _save_to_cache(cache_key, response):
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute("INSERT OR REPLACE INTO cache (hash, response) VALUES (?, ?)", (cache_key, response))
+            conn.commit()
+    except Exception as e:
+        log.error(f"Error guardando cache DB: {e}")
 
 def _get_cache_key(pregunta):
     """Genera una clave de caché basada en la pregunta."""
@@ -61,12 +71,12 @@ def preguntar_io(pregunta_usuario, vectorstore, use_cache=True):
 
     # 1. Verificar caché
     if use_cache:
-        cache = _load_response_cache()
         cache_key = _get_cache_key(pregunta_usuario)
-        if cache_key in cache:
+        cached_response = _get_from_cache(cache_key)
+        if cached_response:
             log.info(f"Cache HIT — clave: {cache_key}")
-            print("⚡ Respuesta cargada desde caché (0 API calls)")
-            return cache[cache_key]
+            print("⚡ Respuesta cargada desde caché DB (0 API calls)")
+            return cached_response
         log.debug(f"Cache MISS — clave: {cache_key}")
 
     # 2. Buscar contexto relevante
@@ -85,16 +95,22 @@ PROBLEMA:
 {pregunta_usuario}
 
 INSTRUCCIONES ESTRUCTURALES ESTRICTAS:
-1. Clasificación: Indica el tipo de problema (LP, Colas, Redes, PERT, etc.) en una sola línea.
-2. Formulación: Presenta el modelo/formulación matemática de forma directa (variables, función objetivo, restricciones).
-3. Resolución: Explica los cálculos paso a paso usando viñetas precisas.
-4. Resultados: Da los resultados numéricos finales de forma clara y destacada.
+1. Clasificación: Indica el tipo de problema.
+2. Formulación: Directo al grano (Variables, Objetivo, Restricciones). Identifica correctamente el orden lógico de predecesores (A va antes que B, etc) sin invertir el orden cronológico.
+3. Resolución (Clara y Sencilla): Resume los cálculos paso a paso. Si hay muchísimos cálculos, preséntalos DIRECTAMENTE EN UNA TABLA Markdown estricta usando barras verticales y guiones. 
+   EJEMPLO DE FORMATO OBLIGATORIO:
+   | Actividad | Duración |
+   |---|---|
+   | A | 5 |
+   NO escribas ecuación por ecuación hacia abajo ni uses simples espacios o tabulaciones.
+4. Resultados: Conclusión clara, en términos muy sencillos y destacada en negritas.
 
-REGLAS DE RESPUESTA CRÍTICAS (GROUNDING):
-- TU METODOLOGÍA Y CONOCIMIENTO ESTÁN LIMITADOS EXCLUSIVAMENTE AL 'CONTEXTO' PROPORCIONADO. No uses conocimientos externos, ni asumas métodos que no estén en el texto extraído.
-- Si el contexto no es suficiente para formular o resolver el problema, indica explícitamente: "No hay información suficiente en el contexto proporcionado para resolver esta parte". No inventes pasos.
-- NO uses conversacionalismos ni rellenos ("¡Claro!", "Aquí tienes...", "En conclusión..."). Empieza directamente con la solución.
-- Si es un problema de redes, lista nodos y capacidades/aristas de forma concisa.
+REGLAS DE RESPUESTA CRÍTICAS (SIMPLICIDAD Y PEDAGOGÍA):
+- Sé extremadamente didáctico, directo al grano y fácil de entender. Actúa como un tutor excelente.
+- Evita saturar la pantalla con derivaciones matemáticas largas. Resume todo en tablas legibles.
+- Escribe las fórmulas matemáticas compactas en una sola línea. No repitas la fórmula y luego el reemplazo en líneas separadas.
+- Utiliza la metodología matemática descrita en el 'CONTEXTO' del libro, pero usa tu propio motor matemático interno para resolver y simplificar.
+- NO uses conversacionalismos ni rellenos. Inicia directo con la solución.
 """
 
     log.debug(f"Prompt construido: {len(prompt)} caracteres, ~{len(prompt)//4} tokens estimados")
@@ -126,10 +142,9 @@ REGLAS DE RESPUESTA CRÍTICAS (GROUNDING):
 
                 # Guardar en caché
                 if use_cache:
-                    cache[cache_key] = resultado
-                    _save_response_cache(cache)
-                    log.info(f"Respuesta guardada en caché (clave: {cache_key})")
-                    print("💾 Respuesta guardada en caché")
+                    _save_to_cache(cache_key, resultado)
+                    log.info(f"Respuesta guardada en caché SQLite (clave: {cache_key})")
+                    print("💾 Respuesta guardada en caché local DB")
 
                 return resultado
 
@@ -158,11 +173,16 @@ REGLAS DE RESPUESTA CRÍTICAS (GROUNDING):
 
 
 def limpiar_cache_respuestas():
-    """Elimina el caché de respuestas."""
-    if os.path.exists(RESPONSE_CACHE_FILE):
-        os.remove(RESPONSE_CACHE_FILE)
-        log.info("Caché de respuestas eliminado")
-        print("🗑️ Caché de respuestas eliminado.")
+    """Limpia el historial del caché de respuestas SQLite mediante query en lugar de borrar el archivo físico."""
+    if os.path.exists(DB_PATH):
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                conn.execute("DELETE FROM cache")
+                conn.commit()
+            log.info("Caché de respuestas (DB) limpiado con éxito")
+            print("🗑️ Historial de caché limpiado.")
+        except Exception as e:
+            log.error(f"Error vaciando tabla de caché: {e}")
     else:
         log.info("No hay caché de respuestas para eliminar")
         print("No hay caché de respuestas.")
