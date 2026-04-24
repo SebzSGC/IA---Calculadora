@@ -56,8 +56,15 @@ async def startup_event():
 def rebuild_task():
     global vectorstore, db_status
     try:
-        delete_vectorstore()
+        # En Windows, ChromaDB (SQLite) suele bloquear los archivos.
+        # Forzamos la limpieza de la referencia y esperamos un momento.
         vectorstore = None
+        import gc
+        import time
+        gc.collect()
+        time.sleep(2) 
+        
+        delete_vectorstore()
         vs, _ = load_or_create_vectorstore()
         vectorstore = vs
         db_status = "ready"

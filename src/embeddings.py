@@ -266,10 +266,40 @@ def search_context(query, vectorstore, k=25, top_n=6):
 def delete_vectorstore():
     """Elimina el vector store persistido para regenerar."""
     import shutil
-    if os.path.exists(CHROMA_DB_DIR):
-        shutil.rmtree(CHROMA_DB_DIR)
-        log.info("ChromaDB eliminado")
-        print("🗑️ ChromaDB eliminado. Re-ejecuta para regenerar.")
-    else:
+    import time
+    import os
+    
+    if not os.path.exists(CHROMA_DB_DIR):
         log.info("No hay ChromaDB para eliminar")
-        print("No hay ChromaDB para eliminar.")
+        return
+
+    # Intento 1: Borrado físico de la carpeta (el más limpio)
+    for i in range(3):
+        try:
+            shutil.rmtree(CHROMA_DB_DIR)
+            log.info("Carpeta ChromaDB eliminada físicamente.")
+            return
+        except Exception as e:
+            log.warning(f"Intento {i+1} de borrado físico fallido (posible bloqueo de Windows): {e}")
+            time.sleep(1)
+
+    # Intento 2: Si el borrado físico falla, vaciamos la base de datos internamente
+    # Esto funciona incluso si los archivos están bloqueados por el propio proceso.
+    log.info("Intentando vaciar la base de datos mediante el cliente de ChromaDB...")
+    try:
+        import chromadb
+        client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
+        # Langchain usa por defecto una colección llamada 'langchain'
+        try:
+            client.delete_collection("langchain")
+            log.info("Colección 'langchain' eliminada internamente.")
+        except:
+            # Si no existe esa, borramos todas las que haya
+            for col in client.list_collections():
+                client.delete_collection(col.name)
+                log.info(f"Colección '{col.name}' eliminada internamente.")
+        
+        log.info("Base de datos vaciada con éxito (archivos conservados pero limpios).")
+    except Exception as e:
+        log.error(f"Error fatal: No se pudo limpiar la base de datos de ninguna forma: {e}")
+        raise e
