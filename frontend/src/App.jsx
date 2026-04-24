@@ -66,10 +66,12 @@ function App() {
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [dbStatus, setDbStatus] = useState('ready');
   const [useCache, setUseCache] = useState(true);
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [ragExplorerData, setRagExplorerData] = useState(null); // Para el modal del RAG Explorer
   const chatEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -85,6 +87,34 @@ function App() {
   useEffect(() => {
     localStorage.setItem('chatsV2', JSON.stringify(chats));
   }, [chats]);
+
+  // Hacer poll al estado de la DB cada 5 segundos si se está construyendo
+  useEffect(() => {
+    let intervalId;
+    if (dbStatus === 'building') {
+      intervalId = setInterval(async () => {
+        try {
+          const res = await fetch('http://localhost:8000/db-status');
+          const data = await res.json();
+          setDbStatus(data.status);
+          if (data.status === 'ready') {
+            alert('¡Base de conocimientos reconstruida exitosamente! Ya puedes preguntar.');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }, 5000);
+    }
+    return () => clearInterval(intervalId);
+  }, [dbStatus]);
+
+  useEffect(() => {
+    // Al cargar la app por primera vez, ver el estado
+    fetch('http://localhost:8000/db-status')
+      .then(res => res.json())
+      .then(data => setDbStatus(data.status))
+      .catch(console.error);
+  }, []);
 
   // Redimensionar el textarea dinámicamente
   const handleInput = (e) => {
@@ -114,7 +144,7 @@ function App() {
   };
 
   const handleSolve = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || dbStatus === 'building') return;
     
     const userMsg = input.trim();
     setInput('');
@@ -156,7 +186,16 @@ function App() {
       
       setChats(prev => prev.map(chat => {
         if (chat.id === currentChatId) {
-          return { ...chat, messages: [...chat.messages, { role: 'bot', content: data.response, typing: true }] };
+          return { 
+            ...chat, 
+            messages: [...chat.messages, { 
+              role: 'bot', 
+              content: data.response, 
+              typing: true,
+              pages: data.pages || [],
+              chunks: data.chunks || []
+            }] 
+          };
         }
         return chat;
       }));
@@ -192,6 +231,21 @@ function App() {
       alert('Error limpiando memoria: ' + e.message);
     } finally {
       setIsClearingCache(false);
+    }
+  }
+
+  const handleRebuildDB = async () => {
+    if (!window.confirm("ATENCIÓN: Esto eliminará la base vectorial actual y la reconstruirá desde cero. Tomará unos minutos. ¿Proceder?")) return;
+    try {
+      const res = await fetch('http://localhost:8000/rebuild-db', { method: 'POST' });
+      if (res.ok) {
+        setDbStatus('building');
+      } else {
+        const error = await res.json();
+        alert(error.detail);
+      }
+    } catch (e) {
+      alert('Error iniciando reconstrucción: ' + e.message);
     }
   }
 
@@ -296,11 +350,20 @@ function App() {
         <div className="sidebar-footer">
           <button 
             className="clear-cache-btn" 
-            onClick={handleClearCache}
-            disabled={isClearingCache}
-            title="Borrar memoria caché semántica de ChromaDB"
+            onClick={handleRebuildDB}
+            disabled={dbStatus === 'building'}
+            title="Borrar y reconstruir la base vectorial (ChromaDB)"
+            style={{ marginBottom: '0.5rem', color: 'var(--text-main)' }}
           >
-            {isClearingCache ? 'Borrando...' : '🗑️ Limpiar Caché Vectorial'}
+            {dbStatus === 'building' ? '⚙️ Reconstruyendo (5-10 min)...' : '⚙️ Reconstruir DB Completa'}
+          </button>
+          <button 
+            className="clear-cache-btn" 
+            onClick={handleClearCache}
+            disabled={isClearingCache || dbStatus === 'building'}
+            title="Borrar memoria caché semántica de consultas"
+          >
+            {isClearingCache ? 'Borrando...' : '🗑️ Limpiar Historial Caché'}
           </button>
         </div>
       </div>
@@ -335,11 +398,25 @@ function App() {
                         {msg.content}
                       </ReactMarkdown>
                     ) : (
-                      <TypewriterMarkdown 
+                        <TypewriterMarkdown 
                         content={msg.content} 
                         isTyping={msg.typing} 
                         onComplete={() => handleTypingComplete(chat.id, idx)}
                       />
+                    )}
+                    
+                    {msg.role === 'bot' && !msg.typing && msg.chunks && msg.chunks.length > 0 && (
+                      <div className="rag-metadata-panel">
+                        <div className="rag-pages-badge">
+                          📚 Páginas consultadas: {msg.pages.join(', ')}
+                        </div>
+                        <button 
+                          className="rag-explorer-btn"
+                          onClick={() => setRagExplorerData({ pages: msg.pages, chunks: msg.chunks })}
+                        >
+                          🔍 Explorador RAG Visual
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -385,13 +462,61 @@ function App() {
             <button 
               className="send-btn" 
               onClick={handleSolve}
-              disabled={!input.trim() || loading}
+              disabled={!input.trim() || loading || dbStatus === 'building'}
             >
               ↑
             </button>
           </div>
+          
+          {dbStatus === 'building' && (
+            <div className="db-building-status">
+              <span className="spinner">🔄</span>
+              La Inteligencia Artificial está estudiando el libro y procesando páginas (aprox. 5-10 min)...
+            </div>
+          )}
         </div>
       </div>
+
+      {/* RAG EXPLORER MODAL */}
+      {ragExplorerData && (
+        <div className="rag-modal-overlay" onClick={() => setRagExplorerData(null)}>
+          <div className="rag-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="rag-modal-header">
+              <h2>🔍 Explorador RAG Interno</h2>
+              <button className="close-modal-btn" onClick={() => setRagExplorerData(null)}>×</button>
+            </div>
+            
+            <div className="rag-modal-body">
+              <div className="rag-chunks-section">
+                <h3>📝 Fragmentos Recuperados (Top {ragExplorerData.chunks.length})</h3>
+                <p className="rag-subtitle">Estos son los pedazos exactos del libro que el Cross-Encoder calificó como perfectos para responder a tu duda:</p>
+                
+                <div className="chunks-list">
+                  {ragExplorerData.chunks.map((chunk, idx) => (
+                    <div key={idx} className="chunk-card">
+                      <div className="chunk-header">
+                        <span className="chunk-badge">Página {chunk.page}</span>
+                        <span className="chunk-score" title="Cross-Encoder Re-Ranking Score">Score: {chunk.score.toFixed(2)}</span>
+                      </div>
+                      <div className="chunk-text">{chunk.content}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rag-pdf-section">
+                <h3>📕 PDF de Origen (Hillier 10ª Edición)</h3>
+                <iframe 
+                  src={`http://localhost:8000/pdf/Investigacion-Operaciones10Edicion-Frederick-S-Hillier.pdf#page=${ragExplorerData.pages[0] || 1}`} 
+                  title="PDF Viewer" 
+                  className="pdf-viewer"
+                ></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

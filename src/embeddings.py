@@ -62,9 +62,23 @@ def load_and_split_pdf():
     )
     chunks = text_splitter.split_documents(md_header_splits)
     
-    # Agregar source genérico a los metadatos
+    # Agregar source genérico y mapear el número de página correcto
     for c in chunks:
         c.metadata["source"] = PDF_PATH
+        # Buscar en el full_text dónde comienza este chunk
+        idx = full_text.find(c.page_content[:100])
+        if idx != -1:
+            # Buscar el marcador *PÁGINA X* más cercano hacia atrás
+            last_page_idx = full_text.rfind('*PÁGINA ', 0, idx)
+            if last_page_idx != -1:
+                # Extraer el número (ej: *PÁGINA 123*)
+                end_idx = full_text.find('*', last_page_idx + 8)
+                page_num = full_text[last_page_idx + 8:end_idx].strip()
+                c.metadata["page"] = page_num
+            else:
+                c.metadata["page"] = "1"
+        else:
+            c.metadata["page"] = "?"
 
     log.info(f"{len(chunks)} fragmentos semánticos creados con éxito.")
     return chunks
@@ -229,13 +243,24 @@ def search_context(query, vectorstore, k=25, top_n=6):
     best_results = scored_docs[:top_n]
 
     paginas = [doc.metadata.get("page", "?") for doc, _ in best_results]
+    # Eliminar duplicados manteniendo el orden
+    paginas_unicas = list(dict.fromkeys([p for p in paginas if p != "?"]))
     ce_scores = [f"{score:.2f}" for _, score in best_results]
     
-    log.info(f"Contexto comprimido (Top {top_n}) — Páginas: {paginas}, CE Scores: {ce_scores}")
-    print(f"  📖 Contexto ultra-preciso (Re-Rank) extraído de páginas: {paginas}")
+    log.info(f"Contexto comprimido (Top {top_n}) — Páginas: {paginas_unicas}, CE Scores: {ce_scores}")
+    print(f"  📖 Contexto ultra-preciso (Re-Rank) extraído de páginas: {paginas_unicas}")
 
     contexto = "\n---\n".join([doc.page_content for doc, _ in best_results])
-    return contexto
+    
+    chunks_info = []
+    for doc, score in best_results:
+        chunks_info.append({
+            "content": doc.page_content,
+            "score": float(score),
+            "page": doc.metadata.get("page", "?")
+        })
+        
+    return contexto, paginas_unicas, chunks_info
 
 
 def delete_vectorstore():

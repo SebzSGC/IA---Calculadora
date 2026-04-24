@@ -86,12 +86,16 @@ def preguntar_io(pregunta_usuario, vectorstore, use_cache=True):
         cached_response = _get_from_cache(pregunta_usuario)
         if cached_response:
             print("⚡ Respuesta cargada desde Caché Semántico (0 API calls)")
-            return cached_response
+            return {
+                "response": cached_response,
+                "pages": ["Caché Semántico"],
+                "chunks": []
+            }
 
     # 2. Buscar contexto relevante
     log.info("Buscando contexto relevante en ChromaDB...")
     print("🔍 Buscando contexto relevante...")
-    contexto = search_context(pregunta_usuario, vectorstore)
+    contexto, paginas, chunks = search_context(pregunta_usuario, vectorstore)
     log.debug(f"Contexto obtenido: {len(contexto)} caracteres")
 
     prompt = f"""
@@ -154,7 +158,11 @@ REGLAS DE RESPUESTA CRÍTICAS (SIMPLICIDAD Y PEDAGOGÍA):
                     _save_to_cache(pregunta_usuario, resultado)
                     print("💾 Respuesta guardada en Caché Semántico local")
 
-                return resultado
+                return {
+                    "response": resultado,
+                    "pages": paginas,
+                    "chunks": chunks
+                }
 
             except Exception as e:
                 last_error = e
@@ -177,7 +185,11 @@ REGLAS DE RESPUESTA CRÍTICAS (SIMPLICIDAD Y PEDAGOGÍA):
 
     log.critical(f"TODOS LOS MODELOS FALLARON. Modelos probados: {CHAT_MODELS}")
     log.critical(f"Último error: {last_error}")
-    raise RuntimeError(f"❌ Todos los modelos fallaron. Último error: {last_error}")
+    return {
+        "response": f"Lo siento, ocurrió un error tras reintentar con múltiples modelos. Detalles del último error:\n\n{last_error}",
+        "pages": paginas if 'paginas' in locals() else [],
+        "chunks": chunks if 'chunks' in locals() else []
+    }
 
 
 def limpiar_cache_respuestas():
