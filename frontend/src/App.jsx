@@ -66,6 +66,8 @@ function App() {
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [useCache, setUseCache] = useState(true);
+  const [isClearingCache, setIsClearingCache] = useState(false);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
   const chatEndRef = useRef(null);
@@ -142,7 +144,7 @@ function App() {
         },
         body: JSON.stringify({
           problem: userMsg,
-          use_cache: true
+          use_cache: useCache
         })
       });
 
@@ -174,15 +176,23 @@ function App() {
     }
   }
 
-  const handleNewChat = async () => {
-    try {
-      await fetch('http://localhost:8000/cache', { method: 'DELETE' });
-    } catch (e) {
-      // Ignorar error de backend
-    }
+  const handleNewChat = () => {
     const newId = Date.now().toString();
     setChats([{ id: newId, title: 'Nuevo Chat', messages: [] }, ...chats]);
     setCurrentChatId(newId);
+  }
+
+  const handleClearCache = async () => {
+    if (!window.confirm("¿Estás seguro de borrar toda la memoria semántica? La IA volverá a gastar tokens en las mismas consultas.")) return;
+    setIsClearingCache(true);
+    try {
+      await fetch('http://localhost:8000/cache', { method: 'DELETE' });
+      alert('Memoria Semántica limpiada correctamente.');
+    } catch (e) {
+      alert('Error limpiando memoria: ' + e.message);
+    } finally {
+      setIsClearingCache(false);
+    }
   }
 
   const handleDeleteChat = (id, e) => {
@@ -283,6 +293,16 @@ function App() {
             </div>
           ))}
         </div>
+        <div className="sidebar-footer">
+          <button 
+            className="clear-cache-btn" 
+            onClick={handleClearCache}
+            disabled={isClearingCache}
+            title="Borrar memoria caché semántica de ChromaDB"
+          >
+            {isClearingCache ? 'Borrando...' : '🗑️ Limpiar Caché Vectorial'}
+          </button>
+        </div>
       </div>
 
       {/* ÁREA PRINCIPAL */}
@@ -343,6 +363,16 @@ function App() {
         </div>
 
         <div className="input-area">
+          <div className="input-options">
+            <label className="toggle-cache-label" title="Si se desactiva, Gemini procesará el texto desde cero gastando tokens.">
+              <input 
+                type="checkbox" 
+                checked={useCache}
+                onChange={(e) => setUseCache(e.target.checked)}
+              />
+              <span>Caché Semántico (Ahorro tokens)</span>
+            </label>
+          </div>
           <div className="input-container">
             <textarea 
               ref={textareaRef}
