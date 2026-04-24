@@ -123,9 +123,12 @@ INSTRUCCIONES ESTRUCTURALES ESTRICTAS:
 4. **Resultados**: Conclusión clara en una frase, con el valor final en **negrita y color** (automático por el estilo).
 
 REGLAS DE ORO DE FORMATO:
-- **LaTeX Obligatorio**: Usa `$$ ... $$` para fórmulas grandes y `$ ... $` para variables en el texto. JAMÁS escribas matemáticas como texto plano (ej. evita `x1 + x2 = 10`, usa `$ x_1 + x_2 = 10 $`).
-- **Negritas Estratégicas**: Usa negritas para resaltar términos clave, pero no abuses.
-- **Sin Relleno**: No saludes, no te despidas, no digas "claro, aquí tienes". Empieza directamente con "**1. Clasificación**".
+- **LaTeX Obligatorio**: Usa `$$ ... $$` para fórmulas grandes y `$ ... $` para variables en el texto. JAMÁS escribas matemáticas como texto plano.
+- **Párrafos Claros**: Usa SIEMPRE doble salto de línea entre párrafos o secciones para asegurar que se rendericen correctamente.
+- **PROHIBIDO EL COLOR**: NO uses comandos como `\color`, `\textcolor` o similares. Usa solo Markdown y LaTeX estándar.
+- **EVITA REDUNDANCIAS**: No escribas el mismo valor o fórmula dos veces. Usa directamente LaTeX para el cálculo.
+- **Negritas Estratégicas**: Usa negritas `**...**` para resaltar términos clave.
+- **Sin Relleno**: Empieza directamente con "**1. Clasificación**".
 - **Didáctica**: Si el paso es complejo, añade una breve nota explicativa en *itálica*.
 """
 
