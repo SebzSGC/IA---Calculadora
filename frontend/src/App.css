@@ -9,8 +9,7 @@
 /* SIDEBAR */
 .sidebar {
   width: 260px;
-  background-color: var(--bg-color);
-  border-right: 1px solid var(--border-color);
+  background-color: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -18,20 +17,26 @@
 }
 
 .new-chat-btn {
-  background-color: var(--accent);
-  color: white;
+  background-color: transparent;
+  color: var(--text-main);
   border: none;
-  border-radius: 6px;
-  padding: 0.8rem;
+  border-radius: 0.375rem; /* 6px */
+  padding: 0.75rem 0.75rem;
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   cursor: pointer;
-  margin-bottom: 1rem;
-  transition: opacity 0.2s;
+  margin-bottom: 0.5rem;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: background-color 0.2s ease;
 }
+
+
+
 .new-chat-btn:hover {
-  opacity: 0.9;
+  background-color: var(--bg-secondary);
 }
 
 .chat-list {
@@ -39,108 +44,133 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 2px;
 }
 
 .chat-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.8rem;
-  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
   cursor: pointer;
   color: var(--text-main);
-  transition: background 0.2s;
+  transition: background-color 0.2s;
+  font-size: 0.875rem;
 }
+
 .chat-item:hover {
   background-color: var(--bg-secondary);
 }
+
 .chat-item.active {
-  background-color: var(--user-msg-bg);
+  background-color: var(--bg-secondary);
 }
 
 .chat-item-title {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.9rem;
   flex: 1;
 }
 
-.delete-chat-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 1.2rem;
-  padding: 0 0.3rem;
+.chat-item-actions {
   display: none;
-}
-.chat-item:hover .delete-chat-btn {
-  display: block;
-}
-.delete-chat-btn:hover {
-  color: #ff5555;
+  gap: 0.25rem;
 }
 
+.chat-item:hover .chat-item-actions {
+  display: flex;
+  align-items: center;
+}
+
+.action-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+
+.action-btn:hover {
+  color: var(--text-main);
+}
+
+.delete-chat-btn:hover {
+  color: var(--danger) !important;
+}
+
+.chat-title-input {
+  flex: 1;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
 
 /* MAIN CHAT AREA */
 .app-container {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
+  position: relative;
+  min-width: 0;
 }
 
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 1rem;
   background-color: var(--bg-color);
-  border-bottom: 1px solid var(--border-color);
-  z-index: 10;
-}
-
-.title {
-  font-size: 1.1rem;
+  color: var(--text-muted);
   font-weight: 600;
-  color: var(--text-main);
+  text-align: center;
+  font-size: 0.875rem;
 }
 
 .chat-container {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem 0;
+  scroll-behavior: smooth;
   display: flex;
   flex-direction: column;
-  align-items: center;
 }
 
 .welcome-screen {
-  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-main);
   text-align: center;
-  max-width: 600px;
-  padding: 0 2rem;
+  padding: 2rem;
+  margin: auto;
 }
 
 .welcome-title {
-  font-size: 2rem;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
   font-weight: 600;
-  margin-bottom: 1rem;
 }
 
 .welcome-subtitle {
+  font-size: 1rem;
   color: var(--text-muted);
-  line-height: 1.5;
+  max-width: 600px;
 }
 
 .message-wrapper {
-  width: 100%;
+  padding: 1.5rem;
   display: flex;
   justify-content: center;
-  padding: 1.5rem 1rem;
+  border-bottom: 1px solid transparent;
 }
 
 .message-wrapper.user {
@@ -163,12 +193,12 @@
 .avatar {
   width: 30px;
   height: 30px;
-  border-radius: 4px;
+  border-radius: 4px; /* O 50% para redondos */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 0.9rem;
+  font-weight: 600;
+  font-size: 0.875rem;
   flex-shrink: 0;
 }
 
@@ -188,7 +218,7 @@
 }
 
 .input-area {
-  padding: 1rem 1.5rem 1.5rem;
+  padding: 0.5rem 1.5rem 1.5rem;
   background-color: var(--bg-color);
   display: flex;
   justify-content: center;
@@ -199,16 +229,15 @@
   width: 100%;
   max-width: 800px;
   background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 1rem;
-  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.25rem 0.5rem;
   display: flex;
   align-items: flex-end;
-  box-shadow: 0 0 15px rgba(0,0,0,0.1);
 }
 
 .input-container:focus-within {
-  border-color: #555;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 textarea {
@@ -221,7 +250,7 @@ textarea {
   font-family: inherit;
   font-size: 1rem;
   resize: none;
-  padding: 0.6rem 0.5rem 0.6rem 1rem;
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
   outline: none;
   line-height: 1.5;
 }
@@ -231,12 +260,12 @@ textarea::placeholder {
 }
 
 .send-btn {
-  background-color: var(--text-main);
-  color: var(--bg-color);
+  background-color: transparent;
+  color: #888;
   border: none;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 0.375rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -244,16 +273,16 @@ textarea::placeholder {
   margin-bottom: 0.4rem;
   margin-right: 0.4rem;
   transition: all 0.2s;
+  font-weight: bold;
 }
 
-.send-btn:disabled {
-  background-color: #555;
-  color: #888;
-  cursor: not-allowed;
+.send-btn:not(:disabled) {
+  background-color: var(--accent);
+  color: white;
 }
 
-.send-btn:hover:not(:disabled) {
-  background-color: #fff;
+.send-btn:not(:disabled):hover {
+  opacity: 0.9;
 }
 
 .typing-indicator {

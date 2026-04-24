@@ -61,11 +61,13 @@ function App() {
       const parsed = JSON.parse(saved);
       if (parsed.length > 0) return parsed[0].id;
     }
-    return chats[0]?.id || Date.now().toString();
+    return chats[0]?.id;
   });
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editingChatId, setEditingChatId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
   const chatEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -196,6 +198,29 @@ function App() {
     }
   }
 
+  const handleEditClick = (chatId, currentTitle, e) => {
+    e.stopPropagation();
+    setEditingChatId(chatId);
+    setEditingTitle(currentTitle);
+  };
+
+  const handleSaveTitle = (chatId) => {
+    if (editingTitle.trim() !== '') {
+      setChats(prev => prev.map(c => 
+        c.id === chatId ? { ...c, title: editingTitle.trim() } : c
+      ));
+    }
+    setEditingChatId(null);
+  };
+
+  const handleKeyDownTitle = (e, chatId) => {
+    if (e.key === 'Enter') {
+      handleSaveTitle(chatId);
+    } else if (e.key === 'Escape') {
+      setEditingChatId(null);
+    }
+  };
+
   return (
     <div className="app-layout">
       {/* SIDEBAR LATERAL */}
@@ -220,14 +245,41 @@ function App() {
                 }
               }}
             >
-              <div className="chat-item-title">{chat.title}</div>
-              <button 
-                className="delete-chat-btn" 
-                title="Eliminar"
-                onClick={(e) => handleDeleteChat(chat.id, e)}
-              >
-                ×
-              </button>
+              {editingChatId === chat.id ? (
+                <input
+                  type="text"
+                  className="chat-title-input"
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onBlur={() => handleSaveTitle(chat.id)}
+                  onKeyDown={(e) => handleKeyDownTitle(e, chat.id)}
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <div className="chat-item-title" onDoubleClick={(e) => handleEditClick(chat.id, chat.title, e)}>
+                  {chat.title}
+                </div>
+              )}
+              
+              <div className="chat-item-actions">
+                {editingChatId !== chat.id && (
+                  <button 
+                    className="action-btn" 
+                    title="Editar nombre"
+                    onClick={(e) => handleEditClick(chat.id, chat.title, e)}
+                  >
+                    ✎
+                  </button>
+                )}
+                <button 
+                  className="action-btn delete-chat-btn" 
+                  title="Eliminar chat"
+                  onClick={(e) => handleDeleteChat(chat.id, e)}
+                >
+                  ×
+                </button>
+              </div>
             </div>
           ))}
         </div>
