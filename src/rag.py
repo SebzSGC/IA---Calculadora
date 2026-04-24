@@ -108,19 +108,22 @@ PROBLEMA:
 {pregunta_usuario}
 
 INSTRUCCIONES ESTRUCTURALES ESTRICTAS:
-1. Clasificación: Indica el tipo de problema.
-2. Formulación: Directo al grano (Variables, Objetivo, Restricciones). Identifica correctamente el orden lógico de predecesores (A va antes que B, etc) sin invertir el orden cronológico.
-3. Resolución (Clara y Sencilla): Resume los cálculos paso a paso. Si hay muchísimos cálculos, preséntalos DIRECTAMENTE EN UNA TABLA Markdown estricta usando barras verticales y guiones. 
+1. **Clasificación**: Indica el tipo de problema.
+2. **Formulación**: Directo al grano (Variables, Objetivo, Restricciones). Identifica correctamente el orden lógico de predecesores (A va antes que B, etc) sin invertir el orden cronológico.
+3. **Resolución (Clara y Sencilla)**: Resume los cálculos paso a paso. Si hay muchísimos cálculos, preséntalos DIRECTAMENTE EN UNA TABLA Markdown estricta usando barras verticales y guiones. 
    EJEMPLO DE FORMATO OBLIGATORIO:
    | Actividad | Duración |
    |---|---|
    | A | 5 |
    NO escribas ecuación por ecuación hacia abajo ni uses simples espacios o tabulaciones.
-4. Resultados: Conclusión clara, en términos muy sencillos y destacada en negritas.
+4. **Resultados**: Conclusión clara, en términos muy sencillos y destacada en negritas.
 
-REGLAS DE RESPUESTA CRÍTICAS (SIMPLICIDAD Y PEDAGOGÍA):
+REGLAS DE RESPUESTA CRÍTICAS (SIMPLICIDAD Y FORMATO):
 - Sé extremadamente didáctico, directo al grano y fácil de entender. Actúa como un tutor excelente.
 - Evita saturar la pantalla con derivaciones matemáticas largas. Resume todo en tablas legibles.
+- FORMATO MATEMÁTICO OBLIGATORIO: Usa delimitadores LaTeX para TODAS las expresiones matemáticas.
+  * Fórmulas importantes (centradas): `$$ Ecuación $$`
+  * Variables o fórmulas simples en el texto: `$ x = 5 $`
 - Escribe las fórmulas matemáticas compactas en una sola línea. No repitas la fórmula y luego el reemplazo en líneas separadas.
 - Utiliza la metodología matemática descrita en el 'CONTEXTO' del libro, pero usa tu propio motor matemático interno para resolver y simplificar.
 - NO uses conversacionalismos ni rellenos. Inicia directo con la solución.

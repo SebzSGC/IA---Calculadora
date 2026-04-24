@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 import 'katex/dist/katex.min.css'
 import './App.css'
 
@@ -31,7 +32,7 @@ const TypewriterMarkdown = ({ content, isTyping, onComplete }) => {
 
   return (
     <ReactMarkdown 
-      remarkPlugins={[remarkMath, remarkGfm]}
+      remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
       rehypePlugins={[rehypeKatex]}
     >
       {displayedContent}
@@ -392,7 +393,7 @@ function App() {
                   <div className="message-text markdown-body">
                     {msg.role === 'user' ? (
                       <ReactMarkdown 
-                        remarkPlugins={[remarkMath, remarkGfm]}
+                        remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
                         rehypePlugins={[rehypeKatex]}
                       >
                         {msg.content}
