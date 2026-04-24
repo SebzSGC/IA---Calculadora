@@ -108,25 +108,25 @@ PROBLEMA:
 {pregunta_usuario}
 
 INSTRUCCIONES ESTRUCTURALES ESTRICTAS:
-1. **Clasificación**: Indica el tipo de problema.
-2. **Formulación**: Directo al grano (Variables, Objetivo, Restricciones). Identifica correctamente el orden lógico de predecesores (A va antes que B, etc) sin invertir el orden cronológico.
-3. **Resolución (Clara y Sencilla)**: Resume los cálculos paso a paso. Si hay muchísimos cálculos, preséntalos DIRECTAMENTE EN UNA TABLA Markdown estricta usando barras verticales y guiones. 
-   EJEMPLO DE FORMATO OBLIGATORIO:
-   | Actividad | Duración |
-   |---|---|
-   | A | 5 |
-   NO escribas ecuación por ecuación hacia abajo ni uses simples espacios o tabulaciones.
-4. **Resultados**: Conclusión clara, en términos muy sencillos y destacada en negritas.
+1. **Clasificación**: Indica el tipo de problema (ej. Programación Lineal, Redes, etc.) en una sola línea.
+2. **Formulación**: 
+   - Usa listas con viñetas para las **Variables de Decisión**.
+   - Usa una línea destacada para la **Función Objetivo** usando LaTeX: `$$ \min Z = ... $$`.
+   - Usa una lista numerada o con viñetas para las **Restricciones**, siempre usando LaTeX `$ ... $` para las inecuaciones.
+3. **Resolución**:
+   - Divide los pasos con subtítulos (usando `###`).
+   - Todas las operaciones matemáticas intermedias DEBEN ir en LaTeX `$ ... $`.
+   - Si el problema requiere una tabla (como Símplex, asignación o transporte), usa TABLAS Markdown reales:
+     | Var | x1 | x2 | RHS |
+     |---|---|---|---|
+     | Z | 1 | -2 | 0 |
+4. **Resultados**: Conclusión clara en una frase, con el valor final en **negrita y color** (automático por el estilo).
 
-REGLAS DE RESPUESTA CRÍTICAS (SIMPLICIDAD Y FORMATO):
-- Sé extremadamente didáctico, directo al grano y fácil de entender. Actúa como un tutor excelente.
-- Evita saturar la pantalla con derivaciones matemáticas largas. Resume todo en tablas legibles.
-- FORMATO MATEMÁTICO OBLIGATORIO: Usa delimitadores LaTeX para TODAS las expresiones matemáticas.
-  * Fórmulas importantes (centradas): `$$ Ecuación $$`
-  * Variables o fórmulas simples en el texto: `$ x = 5 $`
-- Escribe las fórmulas matemáticas compactas en una sola línea. No repitas la fórmula y luego el reemplazo en líneas separadas.
-- Utiliza la metodología matemática descrita en el 'CONTEXTO' del libro, pero usa tu propio motor matemático interno para resolver y simplificar.
-- NO uses conversacionalismos ni rellenos. Inicia directo con la solución.
+REGLAS DE ORO DE FORMATO:
+- **LaTeX Obligatorio**: Usa `$$ ... $$` para fórmulas grandes y `$ ... $` para variables en el texto. JAMÁS escribas matemáticas como texto plano (ej. evita `x1 + x2 = 10`, usa `$ x_1 + x_2 = 10 $`).
+- **Negritas Estratégicas**: Usa negritas para resaltar términos clave, pero no abuses.
+- **Sin Relleno**: No saludes, no te despidas, no digas "claro, aquí tienes". Empieza directamente con "**1. Clasificación**".
+- **Didáctica**: Si el paso es complejo, añade una breve nota explicativa en *itálica*.
 """
 
     log.debug(f"Prompt construido: {len(prompt)} caracteres, ~{len(prompt)//4} tokens estimados")
