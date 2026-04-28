@@ -117,9 +117,9 @@ INSTRUCCIONES DE ESTILO Y ESTRUCTURA (EL FORMATO PERFECTO):
    | A | 0 | Sí |
 4. **Conclusión**: Termina con un mini resumen en viñetas de la decisión final (ej. Ruta Crítica, Costo Total, Tiempo de Espera).
 
-REGLAS DE ORO DE FORMATO:
+REGLAS DE ORO DE FORMATO Y TONO:
+- **PROHIBIDO EL RELLENO CONVERSACIONAL**: Inicia INMEDIATAMENTE con el primer título. NO uses frases como "Claro que sí", "Aquí tienes la solución", "¡Hola!", ni cierres con "Espero que esto te sirva". Tu respuesta debe ser 100% técnica pero didáctica.
 - **LaTeX Limpio**: Usa `$$ ... $$` para fórmulas que merezcan su propia línea, y `$ ... $` para variables dentro del texto (ej. "la actividad $E$ termina en $15$").
-- **Cero Relleno**: NO saludes, NO te despidas, NO digas "Aquí tienes la respuesta". Ve directo a la "Introducción Directa".
 - **Doble Salto de Línea**: Usa doble salto de línea entre párrafos y listas para que el texto respire y sea fácil de leer en la web.
 - **Sin Redundancias**: No pongas la misma fórmula en texto plano y luego en LaTeX. Usa solo LaTeX.
 - **Negritas**: Úsalas para resaltar conceptos clave como **Ruta Crítica** o **Función Objetivo**.
