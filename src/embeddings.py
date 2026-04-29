@@ -4,11 +4,11 @@ Usa ChromaDB como vector store persistente (local, sin costo adicional de API).
 """
 import os
 import time
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import pymupdf4llm
 from langchain_core.documents import Document
 from langchain_community.vectorstores import Chroma
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter, Language
 from config import (PDF_PATH, CHROMA_DB_DIR, EMBEDDING_MODEL,
                     BATCH_SIZE, WAIT_SECONDS, MAX_CHUNKS,
                     CHUNK_SIZE, CHUNK_OVERLAP)
@@ -19,8 +19,8 @@ log = get_logger("embeddings")
 
 def get_embeddings_model():
     """Retorna el modelo de embeddings configurado."""
-    log.info(f"Inicializando modelo local HF de embeddings: {EMBEDDING_MODEL}")
-    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    log.info(f"Inicializando modelo de embeddings de Gemini: {EMBEDDING_MODEL}")
+    return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
 
 
 def load_and_split_pdf():
@@ -55,8 +55,10 @@ def load_and_split_pdf():
     markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
     md_header_splits = markdown_splitter.split_text(full_text)
 
-    # 2. División secundaria para secciones exageradamente largas
-    text_splitter = RecursiveCharacterTextSplitter(
+    # 2. División secundaria inteligente (Math-Aware)
+    # Al usar Language.MARKDOWN, evita cortar en medio de tablas, bloques de código o ecuaciones
+    text_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=Language.MARKDOWN,
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
     )
