@@ -28,7 +28,7 @@ log.debug(f"PDF_PATH: {PDF_PATH}")
 log.debug(f"CHROMA_DB_DIR: {CHROMA_DB_DIR}")
 
 # Modelos
-EMBEDDING_MODEL = "text-embedding-004" # Modelo Gemini con 2048+ tokens de contexto
+EMBEDDING_MODEL = "models/embedding-001" # Modelo estable de Gemini para embeddings (soporta 2048+ tokens)
 CHAT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]  # Optimizado para razonamiento matemático IO
 
 log.info(f"Modelos chat: {CHAT_MODELS}")
