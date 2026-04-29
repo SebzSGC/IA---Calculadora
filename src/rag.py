@@ -137,9 +137,9 @@ Ejemplo de estilo Mermaid:
 ```mermaid
 graph LR
     classDef critical fill:#f9f,stroke:#333,stroke-width:2px;
-    A((Inicio)) -->|5| B((Nodo 1)):::critical
-    A -->|2| C((Nodo 2))
-    B -->|1| D((Fin)):::critical
+    A(("Inicio")) -->|5| B["Nodo B (5 días)"]:::critical
+    A -->|2| C["Nodo C (2 días)"]
+    B -->|1| D(("Fin")):::critical
 ```
 
 ## 5. Conclusión
@@ -156,6 +156,7 @@ REGLAS ESTRICTAS:
 - ✅ Usa doble salto de línea entre secciones
 - ✅ Usa negritas solo para conceptos clave
 - ✅ Incluye diagramas Mermaid bien estructurados SIEMPRE que haya nodos o redes.
+- ❌ **Regla Crítica de Mermaid**: Los textos de los nodos DEBEN ir entre comillas si tienen espacios o paréntesis. Ej: `A["Actividad A (5 días)"]`. No uses llaves `{}` sin comillas.
 
 Si puedes resolver en menos pasos, hazlo. La prioridad es claridad y brevedad.
 """
