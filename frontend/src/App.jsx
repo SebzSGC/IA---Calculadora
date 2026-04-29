@@ -532,6 +532,23 @@ function App() {
             </div>
             
             <div className="rag-modal-body">
+              <div className="rag-visualization-section" style={{ marginBottom: '2rem' }}>
+                <h3>🌌 Espacio Vectorial (Visualización)</h3>
+                <p className="rag-subtitle">Relación de similitud semántica entre tu pregunta y el libro de Hillier.</p>
+                <Mermaid chart={`
+graph LR
+    classDef query fill:#5436da,color:#fff,stroke:#fff,stroke-width:2px;
+    classDef chunk fill:#1e1e1e,stroke:#4caf50,stroke-width:2px;
+    classDef cross fill:#ff9800,color:#fff,stroke:#fff;
+
+    Q((Tu Pregunta)):::query
+    
+    ${ragExplorerData.chunks.map((c, i) => `C${i}(["Página ${c.page}"]):::chunk`).join('\n    ')}
+    
+    ${ragExplorerData.chunks.map((c, i) => `Q -->|Score: ${(c.score * 100).toFixed(1)}%| C${i}`).join('\n    ')}
+                `} />
+              </div>
+
               <div className="rag-chunks-section">
                 <h3>📝 Fragmentos Recuperados (Top {ragExplorerData.chunks.length})</h3>
                 <p className="rag-subtitle">Estos son los pedazos exactos del libro que el Cross-Encoder calificó como perfectos para responder a tu duda:</p>
