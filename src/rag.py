@@ -128,7 +128,21 @@ Presenta resultados en tabla clara:
 | Elemento | Valor | Nota |
 |----------|------|------|
 
-## 4. Conclusión
+## 4. Visualización con Grafos (SI EL PROBLEMA LO PERMITE)
+Si el problema es de Redes (Ruta Más Corta, Flujo), PERT/CPM o Árboles de Decisión, DEBES incluir un bloque de código `mermaid` detallado. 
+- Haz gráficos didácticos: incluye el costo/duración en las flechas.
+- Usa estilos: colorea la Ruta Crítica o el camino óptimo en rojo usando `classDef`.
+
+Ejemplo de estilo Mermaid:
+```mermaid
+graph LR
+    classDef critical fill:#f9f,stroke:#333,stroke-width:2px;
+    A((Inicio)) -->|5| B((Nodo 1)):::critical
+    A -->|2| C((Nodo 2))
+    B -->|1| D((Fin)):::critical
+```
+
+## 5. Conclusión
 Máximo 3 viñetas con el resultado final.
 
 REGLAS ESTRICTAS:
@@ -137,10 +151,11 @@ REGLAS ESTRICTAS:
 - ❌ No exceder lo necesario: cada paso debe ser breve (máx. 3 líneas)
 - ❌ No repetir ideas ni explicaciones
 - ❌ No explicar teoría general, solo lo necesario para resolver el problema
-- ✅ Respuesta total corta y directa (ideal: menos de 300 palabras)
+- ✅ Respuesta total corta y directa (ideal: menos de 300 palabras, excluyendo Mermaid)
 - ✅ Usa LaTeX correctamente: `$$ ... $$` para fórmulas, `$ ... $` en línea
 - ✅ Usa doble salto de línea entre secciones
 - ✅ Usa negritas solo para conceptos clave
+- ✅ Incluye diagramas Mermaid bien estructurados SIEMPRE que haya nodos o redes.
 
 Si puedes resolver en menos pasos, hazlo. La prioridad es claridad y brevedad.
 """

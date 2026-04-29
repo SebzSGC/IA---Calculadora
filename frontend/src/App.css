@@ -243,6 +243,22 @@
   overflow-x: auto;
 }
 
+.mermaid-wrapper {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+.mermaid-wrapper svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* MARKDOWN STYLES */
 .markdown-body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;

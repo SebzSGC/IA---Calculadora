@@ -3,8 +3,36 @@ import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
+import mermaid from 'mermaid'
 import 'katex/dist/katex.min.css'
 import './App.css'
+
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'dark',
+  securityLevel: 'loose',
+});
+
+const Mermaid = ({ chart }) => {
+  const [svg, setSvg] = useState('');
+  
+  useEffect(() => {
+    let isMounted = true;
+    const renderChart = async () => {
+      try {
+        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+        const { svg } = await mermaid.render(id, chart);
+        if (isMounted) setSvg(svg);
+      } catch (error) {
+        console.error('Mermaid render error:', error);
+      }
+    };
+    if (chart) renderChart();
+    return () => { isMounted = false; };
+  }, [chart]);
+
+  return <div className="mermaid-wrapper" dangerouslySetInnerHTML={{ __html: svg }} />;
+};
 
 const TypewriterMarkdown = ({ content, isTyping, onComplete }) => {
   const [displayedContent, setDisplayedContent] = useState(isTyping ? '' : content);
@@ -29,10 +57,27 @@ const TypewriterMarkdown = ({ content, isTyping, onComplete }) => {
     return () => clearInterval(interval);
   }, [content, isTyping]);
 
+  const components = {
+    code({node, inline, className, children, ...props}) {
+      const match = /language-(\w+)/.exec(className || '');
+      const isMermaid = match && match[1] === 'mermaid';
+      
+      if (!inline && isMermaid) {
+        return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+      }
+      return (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    }
+  };
+
   return (
     <ReactMarkdown 
       remarkPlugins={[remarkMath, remarkGfm]}
       rehypePlugins={[rehypeKatex]}
+      components={components}
     >
       {displayedContent}
     </ReactMarkdown>
