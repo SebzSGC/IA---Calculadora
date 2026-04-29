@@ -15,21 +15,33 @@ mermaid.initialize({
 
 const Mermaid = ({ chart }) => {
   const [svg, setSvg] = useState('');
+  const [hasError, setHasError] = useState(false);
   
   useEffect(() => {
     let isMounted = true;
     const renderChart = async () => {
       try {
+        setHasError(false);
+        await mermaid.parse(chart); // Valida la sintaxis primero
         const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
         const { svg } = await mermaid.render(id, chart);
         if (isMounted) setSvg(svg);
       } catch (error) {
-        console.error('Mermaid render error:', error);
+        if (isMounted) setHasError(true);
       }
     };
     if (chart) renderChart();
     return () => { isMounted = false; };
   }, [chart]);
+
+  if (hasError) {
+    return (
+      <div className="mermaid-error" style={{ color: '#ff9800', backgroundColor: '#1e1e1e', padding: '1rem', borderRadius: '8px' }}>
+        <em>[Grafo generado por IA no renderizable]</em>
+        <pre style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>{chart}</pre>
+      </div>
+    );
+  }
 
   return <div className="mermaid-wrapper" dangerouslySetInnerHTML={{ __html: svg }} />;
 };
@@ -62,7 +74,8 @@ const TypewriterMarkdown = ({ content, isTyping, onComplete }) => {
       const match = /language-(\w+)/.exec(className || '');
       const isMermaid = match && match[1] === 'mermaid';
       
-      if (!inline && isMermaid) {
+      // SOLO renderizar el grafo interactivo si la IA ya terminó de escribir
+      if (!inline && isMermaid && !isTyping) {
         return <Mermaid chart={String(children).replace(/\n$/, '')} />;
       }
       return (
