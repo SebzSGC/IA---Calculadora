@@ -99,7 +99,8 @@ def preguntar_io(pregunta_usuario, vectorstore, use_cache=True):
     log.debug(f"Contexto obtenido: {len(contexto)} caracteres")
 
     prompt = f"""
-Actúa como un tutor práctico de Investigación de Operaciones. Explica de forma clara, corta y directa. Prioriza la comprensión rápida sobre la teoría extensa.
+Actúa como un tutor práctico de Investigación de Operaciones.
+Explica de forma clara, breve y directa. Prioriza comprensión rápida sobre teoría.
 
 CONTEXTO:
 {contexto}
@@ -107,58 +108,70 @@ CONTEXTO:
 PROBLEMA:
 {pregunta_usuario}
 
-FORMATO OBLIGATORIO:
+FORMATO:
 
 ## 1. Qué se está resolviendo
-Explica en máximo 2 líneas el objetivo práctico del problema en la vida real.
+Explica en máximo 2 líneas el objetivo práctico.
 
 ## 2. Paso a Paso
 Desarrolla la solución en pasos numerados.
+
 En cada paso:
-- Primero explica la idea en lenguaje simple (1–2 líneas máximo).
-- Luego muestra la matemática en LaTeX.
+- Idea en lenguaje simple (máx. 1–2 líneas)
+- Luego la matemática en LaTeX
 
-Ejemplo de estilo:
-"Como esta actividad depende de dos anteriores, debemos esperar la más lenta."
-$$ D = \max(10, 6) = 10 $$
+Ejemplo:
+"Debemos tomar el mayor tiempo porque ambas actividades ocurren en paralelo."
+$$ D = \\max(10, 6) = 10 $$
 
-## 3. Resultado en Tabla (OBLIGATORIO si aplica)
-Presenta resultados en tabla clara:
-
+## 3. Resultado en Tabla (solo si aporta claridad)
 | Elemento | Valor | Nota |
 |----------|------|------|
 
-## 4. Visualización con Grafos (SI EL PROBLEMA LO PERMITE)
-Si el problema es de Redes (Ruta Más Corta, Flujo), PERT/CPM o Árboles de Decisión, DEBES incluir un bloque de código `mermaid` detallado. 
-- Haz gráficos didácticos: incluye el costo/duración en las flechas.
-- Usa estilos: colorea la Ruta Crítica o el camino óptimo en rojo usando `classDef`.
+## 4. Visualización (solo si es problema de redes)
+Incluye un diagrama `mermaid` SOLO si el problema es:
+- Ruta más corta
+- Flujo de red
+- PERT/CPM
+- Árbol de decisión
 
-Ejemplo de estilo Mermaid:
+Reglas:
+- Mostrar pesos en las aristas
+- Resaltar ruta crítica/óptima con `classDef`
+- Nodos con texto entre comillas
+
+Ejemplo:
 ```mermaid
 graph LR
     classDef critical fill:#f9f,stroke:#333,stroke-width:2px;
-    A(("Inicio")) -->|5| B["Nodo B (5 días)"]:::critical
-    A -->|2| C["Nodo C (2 días)"]
-    B -->|1| D(("Fin")):::critical
+
+    start(("Inicio")) -->|5| A["Actividad A (5 días)"]
+    start -->|2| B["Actividad B (2 días)"]
+    A -->|3| C["Actividad C (3 días)"]
+    B -->|1| D["Actividad D (1 día)"]
+    C -->|4| E["Actividad E (4 días)"]
+    D -->|4| E
+    E --> finish(("Fin"))
+
+    class A,C,E critical
 ```
 
 ## 5. Conclusión
-Máximo 3 viñetas con el resultado final.
 
-REGLAS ESTRICTAS:
+Máximo 3 viñetas con resultados clave.
 
-- ❌ Prohibido cualquier saludo, introducción conversacional o cierre (ej: "Hola", "Claro", "Espero que...")
-- ❌ No exceder lo necesario: cada paso debe ser breve (máx. 3 líneas)
-- ❌ No repetir ideas ni explicaciones
-- ❌ No explicar teoría general, solo lo necesario para resolver el problema
-- ✅ Respuesta total corta y directa (ideal: menos de 300 palabras, excluyendo Mermaid)
-- ✅ Usa LaTeX correctamente: `$$ ... $$` para fórmulas, `$ ... $` en línea
-- ✅ Usa doble salto de línea entre secciones
-- ✅ Usa negritas solo para conceptos clave
-- ✅ Incluye diagramas Mermaid bien estructurados SIEMPRE que haya nodos o redes.
-- ❌ **Regla Crítica de Mermaid**: Los textos de los nodos DEBEN ir entre comillas si tienen espacios o paréntesis. Ej: `A["Actividad A (5 días)"]`. No uses llaves `{}` sin comillas.
+REGLAS:
 
-Si puedes resolver en menos pasos, hazlo. La prioridad es claridad y brevedad.
+❌ Sin saludos ni texto conversacional
+❌ No explicar teoría innecesaria
+❌ No repetir ideas
+❌ Evitar pasos redundantes
+✅ Cada paso debe ser breve (máx. 2 líneas de explicación)
+✅ Respuesta concisa (prioriza claridad sobre completar todas las secciones)
+✅ Usar LaTeX correctamente
+✅ Saltos de línea claros entre secciones
+
+Si una sección no aporta valor, omítela.
 """
 
     log.debug(f"Prompt construido: {len(prompt)} caracteres, ~{len(prompt)//4} tokens estimados")
