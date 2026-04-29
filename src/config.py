@@ -28,19 +28,19 @@ log.debug(f"PDF_PATH: {PDF_PATH}")
 log.debug(f"CHROMA_DB_DIR: {CHROMA_DB_DIR}")
 
 # Modelos
-EMBEDDING_MODEL = "models/embedding-001" # Modelo estable de Gemini para embeddings (soporta 2048+ tokens)
+EMBEDDING_MODEL = "all-MiniLM-L6-v2" # Modelo local, 100% estable y gratis
 CHAT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]  # Optimizado para razonamiento matemático IO
 
 log.info(f"Modelos chat: {CHAT_MODELS}")
 log.info(f"Modelo embeddings: {EMBEDDING_MODEL}")
 
 # Rate limiting (pay-as-you-go — límites muy holgados)
-BATCH_SIZE = 50        # Lote más pequeño para la API de Gemini Embeddings
-WAIT_SECONDS = 3       # Pausa mínima entre lotes (cortesía)
+BATCH_SIZE = 500       # Lote grande para procesamiento local rápido
+WAIT_SECONDS = 0       # Sin pausas para local
 MAX_CHUNKS = None      # None = procesar TODOS los fragmentos del PDF
 
-# Chunking Inteligente (Math-Aware)
-CHUNK_SIZE = 3000      # Suficiente para que quepa un problema con sus tablas Símplex
-CHUNK_OVERLAP = 500    # Solapamiento generoso para no perder continuidad en algoritmos
+# Chunking Inteligente (Math-Aware) adaptado al límite del modelo local (1000 chars)
+CHUNK_SIZE = 1000      
+CHUNK_OVERLAP = 200
 
 log.info("Configuración cargada correctamente")

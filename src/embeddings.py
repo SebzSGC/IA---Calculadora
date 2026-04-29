@@ -4,7 +4,7 @@ Usa ChromaDB como vector store persistente (local, sin costo adicional de API).
 """
 import os
 import time
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 import pymupdf4llm
 from langchain_core.documents import Document
 from langchain_community.vectorstores import Chroma
@@ -19,8 +19,8 @@ log = get_logger("embeddings")
 
 def get_embeddings_model():
     """Retorna el modelo de embeddings configurado."""
-    log.info(f"Inicializando modelo de embeddings de Gemini: {EMBEDDING_MODEL}")
-    return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
+    log.info(f"Inicializando modelo local HF de embeddings: {EMBEDDING_MODEL}")
+    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
 
 def load_and_split_pdf():
