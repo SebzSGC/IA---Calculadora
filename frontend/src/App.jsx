@@ -72,11 +72,16 @@ const TypewriterMarkdown = ({ content, isTyping, onComplete }) => {
   const components = {
     code({node, inline, className, children, ...props}) {
       const match = /language-(\w+)/.exec(className || '');
-      const isMermaid = match && match[1] === 'mermaid';
+      const contentStr = String(children).trim();
+      const isMermaid = (match && match[1] === 'mermaid') || 
+                        contentStr.startsWith('graph ') || 
+                        contentStr.startsWith('pie ') || 
+                        contentStr.startsWith('sequenceDiagram') ||
+                        contentStr.startsWith('stateDiagram');
       
       // SOLO renderizar el grafo interactivo si la IA ya terminó de escribir
       if (!inline && isMermaid && !isTyping) {
-        return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+        return <Mermaid chart={contentStr} />;
       }
       return (
         <code className={className} {...props}>
