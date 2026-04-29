@@ -31,6 +31,9 @@ def load_and_split_pdf():
 
     log.info(f"Cargando PDF y convirtiendo a Markdown con pymupdf4llm desde {PDF_PATH}. Esto puede demorar unos minutos...")
     try:
+        import fitz
+        # Silenciar los molestos warnings de fuentes matemáticas de MuPDF
+        fitz.TOOLS.mupdf_display_errors(False)
         md_chunks = pymupdf4llm.to_markdown(PDF_PATH, page_chunks=True)
     except Exception as e:
         log.error(f"Error al procesar PDF con pymupdf4llm: {e}")
